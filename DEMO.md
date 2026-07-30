@@ -28,8 +28,25 @@ identical to re-run on any day.
 
 ## 3. Filter the discrepancy queue
 
-In the console, filter by type (`MISSING`, `AMOUNT_VARIANCE`, `FEE_VARIANCE`, `ORPHANED`,
-`AMBIGUOUS`), severity, currency or resolution status. Expect 4 + 3 + 2 + 3 + 1 = 13 open findings.
+In the console, use the filter row above the list: type, processor, currency, severity, status and a
+from/to date range, plus **Clear filters**. Expect 4 + 3 + 2 + 3 + 1 = 13 open findings in total.
+
+Worked example — overdue NusaPay captures:
+
+```sh
+bun run cli -- discrepancies --type MISSING --processor NUSAPAY
+curl -s "$BASE/api/public/discrepancies?type=MISSING&processor=NUSAPAY&status=OPEN"
+```
+
+Expected: `count: 2`, for transactions `DMO-NU-0061` and `DMO-NU-0064`, each with the full
+transaction record attached.
+
+The report also carries the monetary exposure of open findings, e.g. IDR 94,979,440 across 4
+findings, VND 43,079,268 across 5, THB 709,313 across 4 — broken down by type and processor:
+
+```sh
+bun run cli -- report        # or: curl -s "$BASE/api/public/report"
+```
 
 ## 4. Trace a settled transaction — `DMO-ME-0003`
 

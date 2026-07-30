@@ -275,9 +275,15 @@ payment methods, and AUTHORIZED / CAPTURED / CANCELLED statuses, with realistic 
 ## Querying, filtering and tracing
 
 - **Dashboard**: totals (transactions, settlements, matched, open discrepancies), position by
-  processor × currency (captured, settled gross, fees, net), and transaction status counts.
-- **Discrepancy queries**: filter by `type`, `severity`, `currency` and `resolution_status`, joined
-  with the related transaction and settlement, newest first, severity ordered.
+  processor × currency (captured, settled gross, fees, net), transaction status counts, and the
+  **monetary exposure of OPEN findings** broken down by currency, type and processor. Exposure uses
+  `abs(expected)` for `MISSING`, `abs(variance)` for amount/fee variances, and `abs(actual)` for
+  orphaned/ambiguous settlements.
+- **Discrepancy queries**: filter by `type`, `severity`, `currency`, `resolution_status`,
+  `processor` (matched against the related transaction *or* settlement) and an inclusive
+  `dateFrom`/`dateTo` range on `created_at`, plus `limit`. Results are joined with the full
+  transaction and settlement investigation fields, newest first, severity ordered. The same filters
+  are available in the console, over HTTP, and in the CLI.
 - **Ingestion audit**: every file upload with record/accepted/rejected counts.
 - **Transaction trace**: exact `transaction_id` lookup, falling back to `merchant_reference`.
   Returns the transaction, its matched settlements (with match method and confidence), all related
@@ -321,9 +327,12 @@ server-function transport, not at stable REST paths.
 | `resolveFinding` | POST | `{ id, status: "RESOLVED" \| "IGNORED", note? }` | `{ ok: true }` |
 | `loadDemoData` | POST | — | `{ cleared, expected, runs, summary }` |
 
-### 2. HTTP endpoint
+### 2. HTTP endpoints
 
-One raw HTTP route, for processors / schedulers pushing files:
+Four public routes: one write (ingestion) and three read-only queries. There is no other REST
+surface.
+
+**Ingestion** — for processors / schedulers pushing files:
 
 ```
 POST /api/public/ingest
@@ -333,8 +342,39 @@ POST /api/public/ingest
   "reconcile": true }
 ```
 
-This endpoint is intentionally unauthenticated for the challenge; in production it must verify a
-per-processor HMAC signature before accepting a payload.
+```sh
+curl -s -X POST "$BASE/api/public/ingest" \
+  -H 'Content-Type: application/json' \
+  -d '{"processor":"NUSAPAY","filename":"nusapay-settlements.csv","content":"<raw file body>","reconcile":true}'
+```
+
+**Read-only queries**
+
+```sh
+# Full reconciliation report (totals, buckets, status counts, open-discrepancy exposure)
+curl -s "$BASE/api/public/report"
+
+# Filtered discrepancies (all filters optional and combinable)
+curl -s "$BASE/api/public/discrepancies?type=MISSING&processor=NUSAPAY&status=OPEN"
+curl -s "$BASE/api/public/discrepancies?currency=VND&severity=HIGH&limit=10"
+curl -s "$BASE/api/public/discrepancies?from=2026-07-01&to=2026-07-31"
+
+# Transaction investigation
+curl -s "$BASE/api/public/trace?query=DMO-ME-0003"
+```
+
+| Route | Filters / params | Statuses |
+| --- | --- | --- |
+| `GET /api/public/report` | — | `200`, `500` |
+| `GET /api/public/discrepancies` | `type`, `severity`, `currency`, `status`, `processor`, `from`, `to`, `limit` | `200`, `400` (invalid filter), `500` |
+| `GET /api/public/trace` | `query` (transaction id or merchant reference) | `200`, `400` (missing query), `404` (not found), `500` |
+| `POST /api/public/ingest` | body: `processor`, `filename`, `content`, `reconcile?` | `200`, `400` |
+
+`processor` on the discrepancy query matches the related **transaction or settlement**, so orphaned
+settlements are included. `from`/`to` are inclusive bounds on `discrepancies.created_at`.
+
+These endpoints are intentionally unauthenticated for the challenge; in production the ingestion
+route must verify a per-processor HMAC signature before accepting a payload.
 
 ### 3. Command-line interface
 
@@ -350,6 +390,9 @@ bun run cli -- ingest-settlements SIAMLINK sample-data/siamlink-settlements.json
 bun run cli -- ingest-settlements MEKONGPAY sample-data/mekongpay-settlements.txt
 bun run cli -- reconcile --as-of 2026-07-30T23:00:00.000Z --rematch-all
 bun run cli -- report
+bun run cli -- discrepancies --type MISSING --processor NUSAPAY
+bun run cli -- discrepancies --currency VND --severity HIGH --status OPEN --limit 10
+bun run cli -- discrepancies --from 2026-07-01 --to 2026-07-31
 bun run cli -- trace DMO-ME-0003
 ```
 
@@ -363,7 +406,7 @@ The CLI reads database credentials from the server environment only; it never pr
 
 ## Tests
 
-`bunx vitest run` — 51 tests across 6 files:
+`bunx vitest run` — 54 tests across 7 files:
 
 - `recon.test.ts` — money/minor-unit scaling, expected fees, date windows and parsing, all three
   adapters incl. rejection paths, every matching tier, ambiguity/orphan refusal, variance severity,
@@ -377,7 +420,9 @@ The CLI reads database credentials from the server environment only; it never pr
   the dataset is date-independent; non-demo rows with colliding identifiers/filenames survive a
   demo reset; demo reconciliation is dataset-scoped and never touches user rows.
 - `cli-args.test.ts` — pure CLI argument parsing: help, unknown commands, missing/extra arguments,
-  processor validation, `--as-of` / `--rematch-all` parsing, trace argument handling. No database.
+  processor validation, `--as-of` / `--rematch-all` parsing, every `discrepancies` filter flag and
+  its validation errors, trace argument handling. No database.
+- `exposure.test.ts` — per-type exposure rules and OPEN-only aggregation by currency/type/processor.
 - `trace.test.ts` — settled trace, variance trace (amount + fee), missing/overdue trace,
   ambiguous explanation, not-found behavior.
 
