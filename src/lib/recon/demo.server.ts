@@ -31,3 +31,35 @@ export async function clearDemoData(
 
   return { transactions: (txns ?? []).length, settlements: (settlements ?? []).length };
 }
+
+/**
+ * Load the deterministic challenge dataset: clear previous demo rows, ingest the
+ * committed sample files through the normal adapters, then reconcile scoped to
+ * the demo dataset. Shared by the server-function API and the CLI.
+ */
+export async function loadDemoDataset() {
+  const { snapshotFiles, demoExpectations, DEMO_AS_OF } = await import("./demo-data");
+  const { ingestSettlementFile, ingestTransactions } = await import("./ingest.server");
+  const { runReconciliation } = await import("./reconcile.server");
+
+  const cleared = await clearDemoData(DEMO_DATASET_ID);
+
+  const runs = [];
+  for (const file of snapshotFiles()) {
+    runs.push(
+      file.processor === "CAPTURES"
+        ? await ingestTransactions({
+            filename: file.filename,
+            content: file.content,
+            datasetId: DEMO_DATASET_ID,
+          })
+        : await ingestSettlementFile({ ...file, datasetId: DEMO_DATASET_ID }),
+    );
+  }
+  const summary = await runReconciliation({
+    rematchAll: true,
+    asOf: DEMO_AS_OF,
+    datasetId: DEMO_DATASET_ID,
+  });
+  return { cleared, expected: demoExpectations(), runs, summary };
+}

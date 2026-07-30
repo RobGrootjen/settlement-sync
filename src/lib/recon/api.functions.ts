@@ -86,30 +86,7 @@ export const resolveFinding = createServerFn({ method: "POST" })
  * before running a full reconciliation. Safe to re-run.
  */
 export const loadDemoData = createServerFn({ method: "POST" }).handler(async () => {
-  const { snapshotFiles, demoExpectations, DEMO_DATASET_ID, DEMO_AS_OF } = await import("./demo-data");
-  const { clearDemoData } = await import("./demo.server");
-  const { ingestSettlementFile, ingestTransactions } = await import("./ingest.server");
-  const { runReconciliation } = await import("./reconcile.server");
-
-  const cleared = await clearDemoData(DEMO_DATASET_ID);
-
-  const runs = [];
-  for (const file of snapshotFiles()) {
-    runs.push(
-      file.processor === "CAPTURES"
-        ? await ingestTransactions({
-            filename: file.filename,
-            content: file.content,
-            datasetId: DEMO_DATASET_ID,
-          })
-        : await ingestSettlementFile({ ...file, datasetId: DEMO_DATASET_ID }),
-    );
-  }
   // Scoped to the demo dataset so the load can never touch user-uploaded rows.
-  const summary = await runReconciliation({
-    rematchAll: true,
-    asOf: DEMO_AS_OF,
-    datasetId: DEMO_DATASET_ID,
-  });
-  return { cleared, expected: demoExpectations(), runs, summary };
+  const { loadDemoDataset } = await import("./demo.server");
+  return loadDemoDataset();
 });
