@@ -55,7 +55,7 @@ export interface TraceEvent {
   event_type: string;
   match_method: string | null;
   settlement_record_id: string | null;
-  details: unknown;
+  details: Record<string, unknown> | null;
 }
 
 export interface TransactionTrace {
