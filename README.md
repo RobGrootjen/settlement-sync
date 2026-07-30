@@ -68,6 +68,7 @@ Schema is applied through Supabase migrations (tables, grants, RLS, indexes, see
 
 ```sh
 npm run dev        # dev server
+bun run cli -- --help   # command-line interface
 bunx vitest run    # full test suite
 bunx tsgo          # TypeScript typecheck (or: npx tsc --noEmit)
 npm run build      # production build
@@ -291,9 +292,21 @@ marks the finding `RESOLVED` (or `IGNORED`). The resolution is timestamped, writ
 `reconciliation_events`, and preserved by later reconciliation runs unless the underlying amounts or
 reason materially change — in which case the finding is re-opened as a genuinely new fact.
 
-## API / interface reference
+## Architecture
 
-Server functions in `src/lib/recon/api.functions.ts` (called from the UI via `useServerFn`):
+See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for design decisions, end-to-end data flow, and the
+scalability approach. A short scripted walkthrough lives in **[DEMO.md](./DEMO.md)**.
+
+## Interfaces
+
+The service exposes exactly three interfaces. There is **no general REST API** — only the single
+public HTTP ingestion route below.
+
+### 1. Internal TanStack server functions
+
+RPC-style server functions in `src/lib/recon/api.functions.ts`, called from the UI via
+`useServerFn`. They are not a public REST surface: they are invoked over TanStack Start's
+server-function transport, not at stable REST paths.
 
 | Function | Method | Input | Returns |
 | --- | --- | --- | --- |
@@ -308,7 +321,9 @@ Server functions in `src/lib/recon/api.functions.ts` (called from the UI via `us
 | `resolveFinding` | POST | `{ id, status: "RESOLVED" \| "IGNORED", note? }` | `{ ok: true }` |
 | `loadDemoData` | POST | — | `{ cleared, expected, runs, summary }` |
 
-HTTP endpoint (for processors / schedulers pushing files):
+### 2. HTTP endpoint
+
+One raw HTTP route, for processors / schedulers pushing files:
 
 ```
 POST /api/public/ingest
@@ -321,9 +336,34 @@ POST /api/public/ingest
 This endpoint is intentionally unauthenticated for the challenge; in production it must verify a
 per-processor HMAC signature before accepting a payload.
 
+### 3. Command-line interface
+
+`scripts/reconcile-cli.ts` is a thin edge over the same service modules (no duplicated logic). It
+reads files from disk, prints JSON to stdout, and exits non-zero on invalid arguments or errors.
+
+```sh
+bun run cli -- --help
+bun run cli -- load-demo
+bun run cli -- ingest-transactions sample-data/transactions.csv
+bun run cli -- ingest-settlements NUSAPAY sample-data/nusapay-settlements.csv
+bun run cli -- ingest-settlements SIAMLINK sample-data/siamlink-settlements.json
+bun run cli -- ingest-settlements MEKONGPAY sample-data/mekongpay-settlements.txt
+bun run cli -- reconcile --as-of 2026-07-30T23:00:00.000Z --rematch-all
+bun run cli -- report
+bun run cli -- trace DMO-ME-0003
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | success |
+| `1` | runtime error, or `trace` found no transaction |
+| `2` | invalid command / arguments (help is printed to stderr) |
+
+The CLI reads database credentials from the server environment only; it never prints them.
+
 ## Tests
 
-`bunx vitest run` — 45 tests across 5 files:
+`bunx vitest run` — 51 tests across 6 files:
 
 - `recon.test.ts` — money/minor-unit scaling, expected fees, date windows and parsing, all three
   adapters incl. rejection paths, every matching tier, ambiguity/orphan refusal, variance severity,
@@ -336,6 +376,8 @@ per-processor HMAC signature before accepting a payload.
 - `demo-load.test.ts` — two consecutive demo loads produce no duplicates and identical results;
   the dataset is date-independent; non-demo rows with colliding identifiers/filenames survive a
   demo reset; demo reconciliation is dataset-scoped and never touches user rows.
+- `cli-args.test.ts` — pure CLI argument parsing: help, unknown commands, missing/extra arguments,
+  processor validation, `--as-of` / `--rematch-all` parsing, trace argument handling. No database.
 - `trace.test.ts` — settled trace, variance trace (amount + fee), missing/overdue trace,
   ambiguous explanation, not-found behavior.
 
