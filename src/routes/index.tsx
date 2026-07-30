@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Multi-processor settlement ingestion, deterministic matching and discrepancy reporting for IDR, THB and VND.",
+          "Ingest processor settlement files across IDR, THB and VND, match them to captures and surface missing, variance, fee and orphaned discrepancies.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

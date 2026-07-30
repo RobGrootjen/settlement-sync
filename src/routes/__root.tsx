@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "MoonCart Settlement Reconciliation Console" },
+      { name: "description", content: "Ingest processor settlement files across IDR, THB and VND, match them to captures and surface missing, variance, fee and orphaned discrepancies." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "MoonCart Settlement Reconciliation Console" },
+      { property: "og:description", content: "Ingest processor settlement files across IDR, THB and VND, match them to captures and surface missing, variance, fee and orphaned discrepancies." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "MoonCart Settlement Reconciliation Console" },
+      { name: "twitter:description", content: "Ingest processor settlement files across IDR, THB and VND, match them to captures and surface missing, variance, fee and orphaned discrepancies." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3a50fc8e-6501-4435-8406-88caa7e06f8a/id-preview-973809be--942e9329-aa1e-4765-bddf-a03b19021262.lovable.app-1785452782270.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3a50fc8e-6501-4435-8406-88caa7e06f8a/id-preview-973809be--942e9329-aa1e-4765-bddf-a03b19021262.lovable.app-1785452782270.png" },
     ],
     links: [
       {
