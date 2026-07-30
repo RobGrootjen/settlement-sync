@@ -141,7 +141,13 @@ export async function listDiscrepancies(filters: DiscrepancyFilters = {}) {
   if (filters.currency) query = query.eq("currency", filters.currency);
   if (filters.status) query = query.eq("resolution_status", filters.status);
   if (filters.dateFrom) query = query.gte("created_at", filters.dateFrom);
-  if (filters.dateTo) query = query.lte("created_at", filters.dateTo);
+  if (filters.dateTo) {
+    // A date-only bound is inclusive of the whole day.
+    const upper = /^\d{4}-\d{2}-\d{2}$/.test(filters.dateTo)
+      ? `${filters.dateTo}T23:59:59.999Z`
+      : filters.dateTo;
+    query = query.lte("created_at", upper);
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
