@@ -10,11 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicDiscrepanciesRouteImport } from './routes/api/public/discrepancies'
 import { Route as ApiPublicIngestRouteImport } from './routes/api/public/ingest'
+import { Route as ApiPublicReportRouteImport } from './routes/api/public/report'
+import { Route as ApiPublicTraceRouteImport } from './routes/api/public/trace'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicDiscrepanciesRoute = ApiPublicDiscrepanciesRouteImport.update({
+  id: '/api/public/discrepancies',
+  path: '/api/public/discrepancies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicIngestRoute = ApiPublicIngestRouteImport.update({
@@ -22,31 +30,69 @@ const ApiPublicIngestRoute = ApiPublicIngestRouteImport.update({
   path: '/api/public/ingest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicReportRoute = ApiPublicReportRouteImport.update({
+  id: '/api/public/report',
+  path: '/api/public/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTraceRoute = ApiPublicTraceRouteImport.update({
+  id: '/api/public/trace',
+  path: '/api/public/trace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/discrepancies': typeof ApiPublicDiscrepanciesRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
+  '/api/public/report': typeof ApiPublicReportRoute
+  '/api/public/trace': typeof ApiPublicTraceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/discrepancies': typeof ApiPublicDiscrepanciesRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
+  '/api/public/report': typeof ApiPublicReportRoute
+  '/api/public/trace': typeof ApiPublicTraceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/discrepancies': typeof ApiPublicDiscrepanciesRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
+  '/api/public/report': typeof ApiPublicReportRoute
+  '/api/public/trace': typeof ApiPublicTraceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/ingest'
+  fullPaths:
+    | '/'
+    | '/api/public/discrepancies'
+    | '/api/public/ingest'
+    | '/api/public/report'
+    | '/api/public/trace'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/ingest'
-  id: '__root__' | '/' | '/api/public/ingest'
+  to:
+    | '/'
+    | '/api/public/discrepancies'
+    | '/api/public/ingest'
+    | '/api/public/report'
+    | '/api/public/trace'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/public/discrepancies'
+    | '/api/public/ingest'
+    | '/api/public/report'
+    | '/api/public/trace'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicDiscrepanciesRoute: typeof ApiPublicDiscrepanciesRoute
   ApiPublicIngestRoute: typeof ApiPublicIngestRoute
+  ApiPublicReportRoute: typeof ApiPublicReportRoute
+  ApiPublicTraceRoute: typeof ApiPublicTraceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +104,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/discrepancies': {
+      id: '/api/public/discrepancies'
+      path: '/api/public/discrepancies'
+      fullPath: '/api/public/discrepancies'
+      preLoaderRoute: typeof ApiPublicDiscrepanciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ingest': {
       id: '/api/public/ingest'
       path: '/api/public/ingest'
@@ -65,13 +118,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIngestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/report': {
+      id: '/api/public/report'
+      path: '/api/public/report'
+      fullPath: '/api/public/report'
+      preLoaderRoute: typeof ApiPublicReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/trace': {
+      id: '/api/public/trace'
+      path: '/api/public/trace'
+      fullPath: '/api/public/trace'
+      preLoaderRoute: typeof ApiPublicTraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicDiscrepanciesRoute: ApiPublicDiscrepanciesRoute,
   ApiPublicIngestRoute: ApiPublicIngestRoute,
+  ApiPublicReportRoute: ApiPublicReportRoute,
+  ApiPublicTraceRoute: ApiPublicTraceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
