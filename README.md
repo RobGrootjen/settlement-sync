@@ -30,13 +30,13 @@ there settlements that belong to nothing at all.
 | Runtime / framework | TanStack Start v1 (React 19, Vite 7), server functions for backend logic |
 | Language | TypeScript (strict) |
 | Database | Supabase PostgreSQL (managed via Lovable Cloud) |
-| Backend logic | TanStack **Server Functions** (`createServerFn`) — the platform equivalent of Edge Functions here; plus one raw HTTP route for machine ingestion |
+| Backend logic | TanStack **Server Functions** (`createServerFn`), plus four public HTTP routes (`POST` ingest and `GET` report / discrepancies / trace) |
 | UI | React + Tailwind CSS v4 (deliberately minimal ops console) |
 | Tests | Vitest |
 
-> Note on the brief: the challenge asked for Supabase Edge Functions. This runtime executes backend
-> logic as TanStack server functions instead. The contracts, module boundaries and logic are
-> identical; only the invocation transport differs. No logic lives in the browser.
+> Note on the stack: the brief leaves the stack open. All backend logic runs server-side as
+> TanStack server functions, with public HTTP routes for machine callers. No business logic lives in
+> the browser.
 
 ## Quick start
 
@@ -121,7 +121,11 @@ src/
     api.functions.ts       thin server-function API surface
   routes/
     index.tsx              ops console (presentation only)
-    api/public/ingest.ts   raw HTTP POST ingestion endpoint
+    api/public/
+      ingest.ts            raw HTTP POST ingestion endpoint
+      discrepancies.ts     GET filtered discrepancy queries
+      report.ts            GET reconciliation report
+      trace.ts             GET transaction investigation
 sample-data/               the committed deterministic challenge files
 ```
 
@@ -275,8 +279,9 @@ payment methods, and AUTHORIZED / CAPTURED / CANCELLED statuses, with realistic 
 ## Querying, filtering and tracing
 
 - **Dashboard**: totals (transactions, settlements, matched, open discrepancies), position by
-  processor × currency (captured, settled gross, fees, net), transaction status counts, and the
-  **monetary exposure of OPEN findings** broken down by currency, type and processor. Exposure uses
+  processor × currency (captured, settled gross, fees, net), transaction status counts, and an
+  **Open discrepancy exposure** panel showing exposure per currency (the report additionally returns
+  the same exposure broken down by type and processor). Exposure uses
   `abs(expected)` for `MISSING`, `abs(variance)` for amount/fee variances, and `abs(actual)` for
   orphaned/ambiguous settlements.
 - **Discrepancy queries**: filter by `type`, `severity`, `currency`, `resolution_status`,
@@ -305,8 +310,9 @@ scalability approach. A short scripted walkthrough lives in **[DEMO.md](./DEMO.m
 
 ## Interfaces
 
-The service exposes exactly three interfaces. There is **no general REST API** — only the single
-public HTTP ingestion route below.
+The service exposes three interface categories: internal TanStack server functions (used by the
+console), four public HTTP endpoints (one `POST` for ingestion and three read-only `GET` queries),
+and the CLI. There is no other REST surface.
 
 ### 1. Internal TanStack server functions
 
@@ -319,8 +325,8 @@ server-function transport, not at stable REST paths.
 | `ingestSettlements` | POST | `{ processor, filename, content }` | ingestion run summary + row rejections |
 | `ingestCaptures` | POST | `{ filename, content }` | ingestion run summary + row rejections |
 | `reconcile` | POST | `{ rematchAll?: boolean, asOf?: string }` | run summary (matched, ambiguous, orphaned, status changes, events) |
-| `getReport` | GET | — | totals, per processor×currency buckets, status counts, discrepancy counts |
-| `getDiscrepancies` | GET | `{ type?, severity?, currency?, status? }` | discrepancy rows joined with transaction + settlement |
+| `getReport` | GET | — | totals, per processor×currency buckets, status counts, discrepancy counts, `openExposure` (by currency / type / processor) |
+| `getDiscrepancies` | GET | `{ type?, severity?, currency?, status?, processor?, dateFrom?, dateTo?, limit? }` | discrepancy rows with full joined transaction + settlement investigation context |
 | `getIngestionRuns` | GET | — | recent ingestion runs |
 | `getEvents` | GET | — | recent reconciliation events |
 | `traceTransaction` | GET | `{ query }` | `{ found, matchedBy, transaction, settlements, discrepancies, events, explanation }` |

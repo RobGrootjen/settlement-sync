@@ -132,6 +132,24 @@ function Console() {
         </section>
 
         <section className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold">Open discrepancy exposure</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {(report.data?.openExposure.byCurrency ?? []).map((b) => (
+              <div key={b.currency} className="rounded-md border border-border px-3 py-2">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{b.currency}</p>
+                <p className="font-mono text-sm">{formatMinor(b.exposure_minor, b.currency)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {b.count} {b.count === 1 ? "finding" : "findings"}
+                </p>
+              </div>
+            ))}
+            {(report.data?.openExposure.byCurrency ?? []).length === 0 && (
+              <p className="text-xs text-muted-foreground">No open findings.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Ingest</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-[200px_1fr]">
             <select
