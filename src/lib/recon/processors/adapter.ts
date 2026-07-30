@@ -20,7 +20,7 @@ export function validateSettlement(
   candidate: NormalizedSettlement,
   rowIndex: number,
 ): RowError | null {
-  const fail = (reason: string): RowError => ({ row: rowIndex, reason, raw: candidate.raw_payload });
+  const fail = (reason: string): RowError => ({ row: rowIndex, reason, raw: JSON.stringify(candidate.raw_payload) });
 
   if (!isCurrency(candidate.currency)) return fail(`Unsupported currency "${candidate.currency}"`);
   if (!Number.isSafeInteger(candidate.gross_amount_minor)) return fail("gross amount is not an integer");

@@ -121,7 +121,7 @@ export async function ingestTransactions(input: {
           : null,
       });
     } catch (e) {
-      errors.push({ row: i + 1, reason: (e as Error).message, raw: row });
+      errors.push({ row: i + 1, reason: (e as Error).message, raw: JSON.stringify(row) });
     }
   });
 

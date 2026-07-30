@@ -59,7 +59,7 @@ export const nusapayAdapter: ProcessorAdapter = {
         if (error) rejected.push(error);
         else accepted.push(candidate);
       } catch (e) {
-        rejected.push({ row: rowNumber, reason: (e as Error).message, raw });
+        rejected.push({ row: rowNumber, reason: (e as Error).message, raw: JSON.stringify(raw) });
       }
     });
 

@@ -45,7 +45,8 @@ export interface NormalizedSettlement {
 export interface RowError {
   row: number;
   reason: string;
-  raw?: unknown;
+  /** JSON-encoded original row, kept as a string so it is always serializable. */
+  raw?: string;
 }
 
 export interface ParseResult {
