@@ -123,8 +123,7 @@ export interface DiscrepancyFilters {
 }
 
 const DISCREPANCY_SELECT =
-  "*, transactions(id,transaction_id,merchant_reference,processor,payment_method,status,currency,captured_amount_minor,capture_date,expected_settlement_date,reconciliation_status)," +
-  " settlement_records(id,processor,processor_transaction_id,merchant_reference,batch_id,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,settlement_date,match_method,match_confidence,source_filename)";
+  "*, transactions(id,transaction_id,merchant_reference,processor,payment_method,status,currency,captured_amount_minor,capture_date,expected_settlement_date,reconciliation_status), settlement_records(id,processor,processor_transaction_id,merchant_reference,batch_id,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,settlement_date,match_method,match_confidence,source_filename)";
 
 export async function listDiscrepancies(filters: DiscrepancyFilters = {}) {
   const limit = filters.limit ?? 200;
