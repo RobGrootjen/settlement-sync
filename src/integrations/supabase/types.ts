@@ -21,6 +21,7 @@ export type Database = {
           currency: string | null
           discrepancy_type: string
           expected_amount_minor: number | null
+          fingerprint: string | null
           id: string
           reason: string | null
           resolution_status: string
@@ -36,6 +37,7 @@ export type Database = {
           currency?: string | null
           discrepancy_type: string
           expected_amount_minor?: number | null
+          fingerprint?: string | null
           id?: string
           reason?: string | null
           resolution_status?: string
@@ -51,6 +53,7 @@ export type Database = {
           currency?: string | null
           discrepancy_type?: string
           expected_amount_minor?: number | null
+          fingerprint?: string | null
           id?: string
           reason?: string | null
           resolution_status?: string
