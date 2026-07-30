@@ -59,6 +59,17 @@ export const getEvents = createServerFn({ method: "GET" }).handler(async () => {
   return listEvents();
 });
 
+/** Investigation: full audit trace for one transaction id / merchant reference. */
+export const traceTransaction = createServerFn({ method: "GET" })
+  .inputValidator((input: { query: string }) => {
+    if (!input?.query?.trim()) throw new Error("query is required");
+    return { query: input.query.trim() };
+  })
+  .handler(async ({ data }) => {
+    const { traceTransaction: run } = await import("./trace.server");
+    return run(data);
+  });
+
 export const resolveFinding = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string; status: "RESOLVED" | "IGNORED"; note?: string }) => {
     if (!input?.id) throw new Error("id is required");
