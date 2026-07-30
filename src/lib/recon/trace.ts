@@ -49,13 +49,15 @@ export interface TraceDiscrepancy {
   settlement_record_id: string | null;
 }
 
+export type TraceJson = string | number | boolean | null | TraceJson[] | { [key: string]: TraceJson };
+
 export interface TraceEvent {
   id: string;
   created_at: string;
   event_type: string;
   match_method: string | null;
   settlement_record_id: string | null;
-  details: Record<string, unknown> | null;
+  details: TraceJson;
 }
 
 export interface TransactionTrace {
