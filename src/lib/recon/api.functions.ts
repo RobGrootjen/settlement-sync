@@ -28,7 +28,7 @@ export const ingestCaptures = createServerFn({ method: "POST" })
   });
 
 export const reconcile = createServerFn({ method: "POST" })
-  .inputValidator((input?: { rematchAll?: boolean }) => ({ rematchAll: input?.rematchAll ?? true }))
+  .inputValidator((input?: { rematchAll?: boolean }) => ({ rematchAll: input?.rematchAll ?? false }))
   .handler(async ({ data }) => {
     const { runReconciliation } = await import("./reconcile.server");
     return runReconciliation(data);
