@@ -59,6 +59,12 @@ async function main(): Promise<number> {
       print(await getReconciliationReport());
       return 0;
     }
+    case "discrepancies": {
+      const { listDiscrepancies } = await import("@/lib/recon/reports.server");
+      const rows = await listDiscrepancies(cmd.filters);
+      print({ filters: cmd.filters, count: rows.length, discrepancies: rows });
+      return 0;
+    }
     case "trace": {
       const { traceTransaction } = await import("@/lib/recon/trace.server");
       const trace = await traceTransaction({ query: cmd.query });

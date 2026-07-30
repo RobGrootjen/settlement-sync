@@ -43,7 +43,18 @@ export const getReport = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const getDiscrepancies = createServerFn({ method: "GET" })
-  .inputValidator((input?: { type?: string; severity?: string; currency?: string; status?: string }) => input ?? {})
+  .inputValidator(
+    (input?: {
+      type?: string;
+      severity?: string;
+      currency?: string;
+      status?: string;
+      processor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      limit?: number;
+    }) => input ?? {},
+  )
   .handler(async ({ data }) => {
     const { listDiscrepancies } = await import("./reports.server");
     return listDiscrepancies(data);

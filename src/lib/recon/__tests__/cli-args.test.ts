@@ -58,6 +58,65 @@ describe("cli argument parsing", () => {
     expect(parseCli(["reconcile", "--force"])).toMatchObject({ ok: false });
   });
 
+  it("parses and validates discrepancies filters", () => {
+    expect(parseCli(["discrepancies"])).toEqual({
+      ok: true,
+      value: { command: "discrepancies", filters: {} },
+    });
+    expect(
+      parseCli([
+        "discrepancies",
+        "--type",
+        "missing",
+        "--processor",
+        "nusapay",
+        "--currency",
+        "idr",
+        "--severity",
+        "high",
+        "--status",
+        "open",
+        "--from",
+        "2026-07-01",
+        "--to",
+        "2026-07-31T23:59:59.999Z",
+        "--limit",
+        "25",
+      ]),
+    ).toEqual({
+      ok: true,
+      value: {
+        command: "discrepancies",
+        filters: {
+          type: "MISSING",
+          processor: "NUSAPAY",
+          currency: "IDR",
+          severity: "HIGH",
+          status: "OPEN",
+          dateFrom: "2026-07-01",
+          dateTo: "2026-07-31T23:59:59.999Z",
+          limit: 25,
+        },
+      },
+    });
+
+    for (const argv of [
+      ["discrepancies", "--type", "NOPE"],
+      ["discrepancies", "--processor", "PAYPAL"],
+      ["discrepancies", "--severity", "URGENT"],
+      ["discrepancies", "--status", "CLOSED"],
+      ["discrepancies", "--from", "yesterday"],
+      ["discrepancies", "--to", "soon"],
+      ["discrepancies", "--limit", "0"],
+      ["discrepancies", "--limit", "abc"],
+      ["discrepancies", "--type"],
+      ["discrepancies", "MISSING"],
+      ["discrepancies", "--wat", "x"],
+    ]) {
+      expect(parseCli(argv), argv.join(" ")).toMatchObject({ ok: false, exitCode: 2 });
+    }
+  });
+
   it("parses trace and report arguments", () => {
     expect(parseCli(["trace", " DMO-ME-0003 "])).toEqual({
       ok: true,
