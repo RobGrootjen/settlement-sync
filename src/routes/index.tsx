@@ -90,6 +90,12 @@ function Console() {
     onSuccess: refreshAll,
   });
 
+  const traceFn = useServerFn(traceTransaction);
+  const [traceQuery, setTraceQuery] = useState("");
+  const trace = useMutation({
+    mutationFn: (query: string) => traceFn({ data: { query } }),
+  });
+
   const totals = report.data?.totals;
 
   return (
