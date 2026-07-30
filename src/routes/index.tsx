@@ -260,6 +260,7 @@ function Console() {
 
         <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Ingestion audit</h2>
+          <p className="sr-only">Audit trail of ingestion runs</p>
           <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
             {(runs.data ?? []).map((r) => (
               <li key={r.id} className="font-mono">
