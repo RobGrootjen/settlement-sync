@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "cli": "bun scripts/reconcile-cli.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
