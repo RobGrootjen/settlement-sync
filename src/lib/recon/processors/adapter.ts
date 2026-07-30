@@ -33,8 +33,13 @@ export function validateSettlement(
     );
   }
   if (Number.isNaN(new Date(candidate.settlement_date).getTime())) return fail("invalid settlement date");
+  // A row with no identifiers is still usable: tier-3 (amount + currency +
+  // date window) exists precisely for anonymous processor rows. It is only
+  // rejected when it also lacks the fields tier 3 needs.
   if (!candidate.processor_transaction_id && !candidate.merchant_reference) {
-    return fail("row has neither processor transaction id nor merchant reference");
+    if (!candidate.gross_amount_minor || !candidate.settlement_date) {
+      return fail("row has no identifiers and no amount/date to match on");
+    }
   }
   return null;
 }
