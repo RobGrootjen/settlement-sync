@@ -1,56 +1,33 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { DEMO_PREFIX, DATASET_FILENAMES } from "./dataset/generate";
-
-/** Current dataset filenames plus the earlier hand-written fixture filenames,
- * so an older demo load is cleaned up too. */
-const DEMO_FILENAMES = [
-  ...(Object.values(DATASET_FILENAMES) as string[]),
-  "captures.json",
-  "nusapay_settlement.csv",
-  "siamlink_batch.json",
-  "mekongpay_settlement.txt",
-];
-const LEGACY_TXN_PREFIXES = ["NP-", "SL-", "MK-"];
+import { DEMO_DATASET_ID } from "./dataset/snapshot";
 
 /**
- * Remove ONLY demo-generated rows. Demo transactions and settlements carry the
- * DMO- prefix / known sample filenames, so operator-uploaded data is untouched.
+ * Remove ONLY rows carrying the demo dataset marker.
+ *
+ * Cleanup is marker-based on purpose: filenames, `NP-`/`SL-`/`MK-` transaction
+ * prefixes and merchant-reference prefixes are all values that legitimate
+ * uploaded data could share, so they are never used as delete criteria.
  * Children (discrepancies, events) are deleted before their parents.
  */
-export async function clearDemoData(): Promise<{ transactions: number; settlements: number }> {
-  const [{ data: txns }, { data: settlements }] = await Promise.all([
-    supabaseAdmin
-      .from("transactions")
-      .select("id")
-      .or(
-        [`transaction_id.like.${DEMO_PREFIX}%`, ...LEGACY_TXN_PREFIXES.map((p) => `transaction_id.like.${p}%`)].join(","),
-      ),
-    supabaseAdmin.from("settlement_records").select("id").in("source_filename", DEMO_FILENAMES),
-  ]);
-
-  const txnIds = (txns ?? []).map((t) => t.id);
-  const settlementIds = (settlements ?? []).map((s) => s.id);
+export async function clearDemoData(
+  datasetId: string = DEMO_DATASET_ID,
+): Promise<{ transactions: number; settlements: number }> {
+  const [{ data: txns, error: txnError }, { data: settlements, error: settlementError }] =
+    await Promise.all([
+      supabaseAdmin.from("transactions").select("id").eq("dataset_id", datasetId),
+      supabaseAdmin.from("settlement_records").select("id").eq("dataset_id", datasetId),
+    ]);
+  if (txnError) throw new Error(txnError.message);
+  if (settlementError) throw new Error(settlementError.message);
 
   for (const table of ["discrepancies", "reconciliation_events"] as const) {
-    if (txnIds.length) {
-      const { error } = await supabaseAdmin.from(table).delete().in("transaction_id", txnIds);
-      if (error) throw new Error(error.message);
-    }
-    if (settlementIds.length) {
-      const { error } = await supabaseAdmin.from(table).delete().in("settlement_record_id", settlementIds);
-      if (error) throw new Error(error.message);
-    }
-  }
-
-  if (settlementIds.length) {
-    const { error } = await supabaseAdmin.from("settlement_records").delete().in("id", settlementIds);
+    const { error } = await supabaseAdmin.from(table).delete().eq("dataset_id", datasetId);
     if (error) throw new Error(error.message);
   }
-  if (txnIds.length) {
-    const { error } = await supabaseAdmin.from("transactions").delete().in("id", txnIds);
+  for (const table of ["settlement_records", "transactions", "ingestion_runs"] as const) {
+    const { error } = await supabaseAdmin.from(table).delete().eq("dataset_id", datasetId);
     if (error) throw new Error(error.message);
   }
-  await supabaseAdmin.from("ingestion_runs").delete().in("filename", DEMO_FILENAMES);
 
-  return { transactions: txnIds.length, settlements: settlementIds.length };
+  return { transactions: (txns ?? []).length, settlements: (settlements ?? []).length };
 }

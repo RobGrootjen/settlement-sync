@@ -24,16 +24,21 @@ export async function ingestSettlementFile(input: {
   processor: string;
   filename: string;
   content: string;
+  /** Optional dataset marker; demo loads stamp every row so cleanup is safe. */
+  datasetId?: string | null;
 }): Promise<IngestSummary> {
   const adapter = getAdapter(input.processor);
   const { accepted, rejected, recordCount } = adapter.parse(input.content, input.filename);
   const errors = [...rejected];
   let insertedCount = 0;
 
-  if (accepted.length > 0) {
+  const datasetId = input.datasetId ?? null;
+  const stamped = accepted.map((row) => ({ ...row, dataset_id: datasetId }));
+
+  if (stamped.length > 0) {
     const { data, error } = await supabaseAdmin
       .from("settlement_records")
-      .upsert(accepted as never, {
+      .upsert(stamped as never, {
         onConflict:
           "processor,processor_transaction_id,merchant_reference,settlement_date,gross_amount_minor",
         ignoreDuplicates: true,
@@ -49,6 +54,7 @@ export async function ingestSettlementFile(input: {
   const { data: run, error: runError } = await supabaseAdmin
     .from("ingestion_runs")
     .insert({
+      dataset_id: input.datasetId ?? null,
       processor: adapter.code,
       filename: input.filename,
       record_count: recordCount,
@@ -78,6 +84,7 @@ export async function ingestSettlementFile(input: {
 export async function ingestTransactions(input: {
   filename: string;
   content: string;
+  datasetId?: string | null;
 }): Promise<IngestSummary> {
   const errors: RowError[] = [];
   let rows: TransactionInput[] = [];
@@ -106,6 +113,7 @@ export async function ingestTransactions(input: {
           : parseMinor(row.captured_amount_minor);
       const captureDate = row.capture_date ? new Date(row.capture_date).toISOString() : null;
       accepted.push({
+        dataset_id: input.datasetId ?? null,
         transaction_id: row.transaction_id,
         merchant_reference: row.merchant_reference ?? null,
         processor: row.processor,
@@ -136,6 +144,7 @@ export async function ingestTransactions(input: {
   const { data: run, error: runError } = await supabaseAdmin
     .from("ingestion_runs")
     .insert({
+      dataset_id: input.datasetId ?? null,
       processor: "CAPTURES",
       filename: input.filename,
       record_count: rows.length,

@@ -16,9 +16,12 @@ export type { ReconciliationSummary } from "./plan";
  * Re-running with unchanged data performs no writes and emits no events.
  */
 export async function runReconciliation(
-  options: { rematchAll?: boolean } = {},
+  options: { rematchAll?: boolean; asOf?: string } = {},
 ): Promise<ReconciliationSummary> {
-  const now = new Date();
+  // asOf lets the deterministic demo reconcile against a fixed clock so its
+  // results never drift with the calendar. Normal runs use wall-clock now.
+  const now = options.asOf ? new Date(options.asOf) : new Date();
+  if (Number.isNaN(now.getTime())) throw new Error(`invalid asOf "${options.asOf}"`);
 
   const [
     { data: txnData, error: txnError },
@@ -29,12 +32,12 @@ export async function runReconciliation(
     supabaseAdmin
       .from("transactions")
       .select(
-        "id,transaction_id,merchant_reference,processor,payment_method,status,currency,captured_amount_minor,capture_date,expected_settlement_date,reconciliation_status",
+        "id,transaction_id,merchant_reference,processor,payment_method,status,currency,captured_amount_minor,capture_date,expected_settlement_date,reconciliation_status,dataset_id",
       ),
     supabaseAdmin
       .from("settlement_records")
       .select(
-        "id,processor,batch_id,processor_transaction_id,merchant_reference,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,settlement_date,source_filename,matched_transaction_id,match_method,match_confidence",
+        "id,processor,batch_id,processor_transaction_id,merchant_reference,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,settlement_date,source_filename,matched_transaction_id,match_method,match_confidence,dataset_id",
       )
       .order("settlement_date", { ascending: true }),
     supabaseAdmin.from("processor_fee_rules").select("*"),
@@ -58,6 +61,21 @@ export async function runReconciliation(
     rematchAll: options.rematchAll ?? false,
   });
 
+  // Findings/events inherit the dataset marker of the row they describe, so
+  // demo cleanup can delete them by marker alone.
+  const datasetOf = new Map<string, string | null>();
+  for (const row of (txnData ?? []) as Array<{ id: string; dataset_id?: string | null }>) {
+    datasetOf.set(row.id, row.dataset_id ?? null);
+  }
+  for (const row of (settlementData ?? []) as Array<{ id: string; dataset_id?: string | null }>) {
+    datasetOf.set(row.id, row.dataset_id ?? null);
+  }
+  const stamp = <T extends { transaction_id?: string | null; settlement_record_id?: string | null }>(row: T) => ({
+    ...row,
+    dataset_id:
+      datasetOf.get(row.transaction_id ?? "") ?? datasetOf.get(row.settlement_record_id ?? "") ?? null,
+  });
+
   await applyMatchUpdates(plan.matchUpdates);
   await applyStatusUpdates(plan.statusUpdates);
 
@@ -76,11 +94,11 @@ export async function runReconciliation(
   if (plan.discrepancyInserts.length > 0) {
     const { error } = await supabaseAdmin
       .from("discrepancies")
-      .upsert(plan.discrepancyInserts as never, { onConflict: "fingerprint" });
+      .upsert(plan.discrepancyInserts.map(stamp) as never, { onConflict: "fingerprint" });
     if (error) throw new Error(error.message);
   }
   if (plan.events.length > 0) {
-    const { error } = await supabaseAdmin.from("reconciliation_events").insert(plan.events as never);
+    const { error } = await supabaseAdmin.from("reconciliation_events").insert(plan.events.map(stamp) as never);
     if (error) throw new Error(error.message);
   }
 

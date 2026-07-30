@@ -19,6 +19,7 @@ export type Database = {
           actual_amount_minor: number | null
           created_at: string
           currency: string | null
+          dataset_id: string | null
           discrepancy_type: string
           expected_amount_minor: number | null
           fingerprint: string | null
@@ -35,6 +36,7 @@ export type Database = {
           actual_amount_minor?: number | null
           created_at?: string
           currency?: string | null
+          dataset_id?: string | null
           discrepancy_type: string
           expected_amount_minor?: number | null
           fingerprint?: string | null
@@ -51,6 +53,7 @@ export type Database = {
           actual_amount_minor?: number | null
           created_at?: string
           currency?: string | null
+          dataset_id?: string | null
           discrepancy_type?: string
           expected_amount_minor?: number | null
           fingerprint?: string | null
@@ -84,6 +87,7 @@ export type Database = {
         Row: {
           accepted_count: number
           created_at: string
+          dataset_id: string | null
           errors: Json
           filename: string | null
           id: string
@@ -94,6 +98,7 @@ export type Database = {
         Insert: {
           accepted_count?: number
           created_at?: string
+          dataset_id?: string | null
           errors?: Json
           filename?: string | null
           id?: string
@@ -104,6 +109,7 @@ export type Database = {
         Update: {
           accepted_count?: number
           created_at?: string
+          dataset_id?: string | null
           errors?: Json
           filename?: string | null
           id?: string
@@ -149,6 +155,7 @@ export type Database = {
       reconciliation_events: {
         Row: {
           created_at: string
+          dataset_id: string | null
           details: Json
           event_type: string
           id: string
@@ -158,6 +165,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dataset_id?: string | null
           details?: Json
           event_type: string
           id?: string
@@ -167,6 +175,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dataset_id?: string | null
           details?: Json
           event_type?: string
           id?: string
@@ -196,6 +205,7 @@ export type Database = {
           batch_id: string | null
           created_at: string
           currency: string
+          dataset_id: string | null
           fee_amount_minor: number
           gross_amount_minor: number
           id: string
@@ -214,6 +224,7 @@ export type Database = {
           batch_id?: string | null
           created_at?: string
           currency: string
+          dataset_id?: string | null
           fee_amount_minor: number
           gross_amount_minor: number
           id?: string
@@ -232,6 +243,7 @@ export type Database = {
           batch_id?: string | null
           created_at?: string
           currency?: string
+          dataset_id?: string | null
           fee_amount_minor?: number
           gross_amount_minor?: number
           id?: string
@@ -262,6 +274,7 @@ export type Database = {
           captured_amount_minor: number | null
           created_at: string
           currency: string
+          dataset_id: string | null
           expected_settlement_date: string | null
           id: string
           merchant_reference: string | null
@@ -276,6 +289,7 @@ export type Database = {
           captured_amount_minor?: number | null
           created_at?: string
           currency: string
+          dataset_id?: string | null
           expected_settlement_date?: string | null
           id?: string
           merchant_reference?: string | null
@@ -290,6 +304,7 @@ export type Database = {
           captured_amount_minor?: number | null
           created_at?: string
           currency?: string
+          dataset_id?: string | null
           expected_settlement_date?: string | null
           id?: string
           merchant_reference?: string | null

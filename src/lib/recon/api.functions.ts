@@ -28,7 +28,10 @@ export const ingestCaptures = createServerFn({ method: "POST" })
   });
 
 export const reconcile = createServerFn({ method: "POST" })
-  .inputValidator((input?: { rematchAll?: boolean }) => ({ rematchAll: input?.rematchAll ?? false }))
+  .inputValidator((input?: { rematchAll?: boolean; asOf?: string }) => ({
+    rematchAll: input?.rematchAll ?? false,
+    asOf: input?.asOf,
+  }))
   .handler(async ({ data }) => {
     const { runReconciliation } = await import("./reconcile.server");
     return runReconciliation(data);
@@ -72,22 +75,25 @@ export const resolveFinding = createServerFn({ method: "POST" })
  * before running a full reconciliation. Safe to re-run.
  */
 export const loadDemoData = createServerFn({ method: "POST" }).handler(async () => {
-  const { demoDataset } = await import("./demo-data");
+  const { snapshotFiles, demoExpectations, DEMO_DATASET_ID, DEMO_AS_OF } = await import("./demo-data");
   const { clearDemoData } = await import("./demo.server");
   const { ingestSettlementFile, ingestTransactions } = await import("./ingest.server");
   const { runReconciliation } = await import("./reconcile.server");
 
-  const cleared = await clearDemoData();
-  const dataset = demoDataset();
+  const cleared = await clearDemoData(DEMO_DATASET_ID);
 
   const runs = [];
-  for (const file of dataset.files) {
+  for (const file of snapshotFiles()) {
     runs.push(
       file.processor === "CAPTURES"
-        ? await ingestTransactions({ filename: file.filename, content: file.content })
-        : await ingestSettlementFile(file),
+        ? await ingestTransactions({
+            filename: file.filename,
+            content: file.content,
+            datasetId: DEMO_DATASET_ID,
+          })
+        : await ingestSettlementFile({ ...file, datasetId: DEMO_DATASET_ID }),
     );
   }
-  const summary = await runReconciliation({ rematchAll: true });
-  return { cleared, expected: dataset.expected, runs, summary };
+  const summary = await runReconciliation({ rematchAll: true, asOf: DEMO_AS_OF });
+  return { cleared, expected: demoExpectations(), runs, summary };
 });
