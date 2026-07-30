@@ -392,6 +392,53 @@ function Console() {
 
         <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Discrepancies</h2>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            {(
+              [
+                ["type", ["MISSING", "AMOUNT_VARIANCE", "FEE_VARIANCE", "ORPHANED", "AMBIGUOUS"]],
+                ["processor", ["NUSAPAY", "SIAMLINK", "MEKONGPAY"]],
+                ["currency", ["IDR", "THB", "VND"]],
+                ["severity", ["LOW", "MEDIUM", "HIGH"]],
+                ["status", ["OPEN", "RESOLVED", "IGNORED"]],
+              ] as const
+            ).map(([key, options]) => (
+              <select
+                key={key}
+                aria-label={`Filter by ${key}`}
+                value={filters[key]}
+                onChange={(e) => setFilters((f) => ({ ...f, [key]: e.target.value }))}
+                className="rounded-md border border-input bg-background px-2 py-1"
+              >
+                <option value="">All {key}</option>
+                {options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ))}
+            <input
+              type="date"
+              aria-label="Filter from date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+              className="rounded-md border border-input bg-background px-2 py-1"
+            />
+            <input
+              type="date"
+              aria-label="Filter to date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
+              className="rounded-md border border-input bg-background px-2 py-1"
+            />
+            <button
+              onClick={() => setFilters(emptyFilters)}
+              className="rounded-md border border-input px-2 py-1"
+            >
+              Clear filters
+            </button>
+            <span className="text-muted-foreground">{(findings.data ?? []).length} shown</span>
+          </div>
           <div className="mt-3 space-y-2">
             {(findings.data ?? []).map((d) => (
               <div key={d.id} className="rounded-md border border-border p-3">
