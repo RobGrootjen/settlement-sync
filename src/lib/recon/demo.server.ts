@@ -1,7 +1,16 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { DEMO_PREFIX, DATASET_FILENAMES } from "./dataset/generate";
 
-const DEMO_FILENAMES = Object.values(DATASET_FILENAMES) as string[];
+/** Current dataset filenames plus the earlier hand-written fixture filenames,
+ * so an older demo load is cleaned up too. */
+const DEMO_FILENAMES = [
+  ...(Object.values(DATASET_FILENAMES) as string[]),
+  "captures.json",
+  "nusapay_settlement.csv",
+  "siamlink_batch.json",
+  "mekongpay_settlement.txt",
+];
+const LEGACY_TXN_PREFIXES = ["NP-", "SL-", "MK-"];
 
 /**
  * Remove ONLY demo-generated rows. Demo transactions and settlements carry the
@@ -10,7 +19,12 @@ const DEMO_FILENAMES = Object.values(DATASET_FILENAMES) as string[];
  */
 export async function clearDemoData(): Promise<{ transactions: number; settlements: number }> {
   const [{ data: txns }, { data: settlements }] = await Promise.all([
-    supabaseAdmin.from("transactions").select("id").like("transaction_id", `${DEMO_PREFIX}%`),
+    supabaseAdmin
+      .from("transactions")
+      .select("id")
+      .or(
+        [`transaction_id.like.${DEMO_PREFIX}%`, ...LEGACY_TXN_PREFIXES.map((p) => `transaction_id.like.${p}%`)].join(","),
+      ),
     supabaseAdmin.from("settlement_records").select("id").in("source_filename", DEMO_FILENAMES),
   ]);
 
