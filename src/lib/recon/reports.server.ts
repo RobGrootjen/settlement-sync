@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { summarizeExposure, type OpenExposure } from "./exposure";
 
 export interface CurrencyBucket {
   currency: string;
@@ -20,6 +21,8 @@ export interface ReconciliationReport {
   };
   statusCounts: Record<string, number>;
   discrepancyCounts: Array<{ type: string; severity: string; count: number }>;
+  /** Monetary exposure of OPEN findings, by currency / type / processor. */
+  openExposure: OpenExposure;
 }
 
 export async function getReconciliationReport(): Promise<ReconciliationReport> {
@@ -28,7 +31,11 @@ export async function getReconciliationReport(): Promise<ReconciliationReport> {
     supabaseAdmin
       .from("settlement_records")
       .select("processor,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,matched_transaction_id"),
-    supabaseAdmin.from("discrepancies").select("discrepancy_type,severity,resolution_status"),
+    supabaseAdmin
+      .from("discrepancies")
+      .select(
+        "discrepancy_type,severity,resolution_status,currency,expected_amount_minor,actual_amount_minor,variance_amount_minor,transactions(processor),settlement_records(processor)",
+      ),
   ]);
 
   const bucketMap = new Map<string, CurrencyBucket>();
@@ -85,6 +92,20 @@ export async function getReconciliationReport(): Promise<ReconciliationReport> {
     },
     statusCounts,
     discrepancyCounts: [...counterMap.values()].sort((a, b) => b.count - a.count),
+    openExposure: summarizeExposure(
+      (discrepancies ?? []).map((d) => ({
+        discrepancy_type: d.discrepancy_type,
+        currency: d.currency,
+        resolution_status: d.resolution_status,
+        expected_amount_minor: d.expected_amount_minor,
+        actual_amount_minor: d.actual_amount_minor,
+        variance_amount_minor: d.variance_amount_minor,
+        processor:
+          (d as { transactions?: { processor?: string } | null }).transactions?.processor ??
+          (d as { settlement_records?: { processor?: string } | null }).settlement_records?.processor ??
+          null,
+      })),
+    ),
   };
 }
 
@@ -93,27 +114,49 @@ export interface DiscrepancyFilters {
   severity?: string;
   currency?: string;
   status?: string;
+  /** Matches the related transaction's OR settlement's processor. */
+  processor?: string;
+  /** Inclusive lower/upper bound on discrepancies.created_at (ISO). */
+  dateFrom?: string;
+  dateTo?: string;
   limit?: number;
 }
 
+const DISCREPANCY_SELECT =
+  "*, transactions(id,transaction_id,merchant_reference,processor,payment_method,status,currency,captured_amount_minor,capture_date,expected_settlement_date,reconciliation_status)," +
+  " settlement_records(id,processor,processor_transaction_id,merchant_reference,batch_id,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,settlement_date,match_method,match_confidence,source_filename)";
+
 export async function listDiscrepancies(filters: DiscrepancyFilters = {}) {
+  const limit = filters.limit ?? 200;
   let query = supabaseAdmin
     .from("discrepancies")
-    .select(
-      "*, transactions(transaction_id,processor,payment_method), settlement_records(processor,processor_transaction_id,batch_id,source_filename)",
-    )
+    .select(DISCREPANCY_SELECT)
     .order("severity", { ascending: true })
     .order("created_at", { ascending: false })
-    .limit(filters.limit ?? 200);
+    // Processor lives on the related rows, so it is applied after the fetch;
+    // widen the fetch in that case so the limit still returns `limit` matches.
+    .limit(filters.processor ? Math.max(limit * 10, 1000) : limit);
 
   if (filters.type) query = query.eq("discrepancy_type", filters.type);
   if (filters.severity) query = query.eq("severity", filters.severity);
   if (filters.currency) query = query.eq("currency", filters.currency);
   if (filters.status) query = query.eq("resolution_status", filters.status);
+  if (filters.dateFrom) query = query.gte("created_at", filters.dateFrom);
+  if (filters.dateTo) query = query.lte("created_at", filters.dateTo);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  const rows = data ?? [];
+  if (!filters.processor) return rows;
+
+  const wanted = filters.processor.toUpperCase();
+  return rows
+    .filter((r) => {
+      const txn = (r as { transactions?: { processor?: string } | null }).transactions;
+      const settlement = (r as { settlement_records?: { processor?: string } | null }).settlement_records;
+      return txn?.processor?.toUpperCase() === wanted || settlement?.processor?.toUpperCase() === wanted;
+    })
+    .slice(0, limit);
 }
 
 export async function listIngestionRuns(limit = 25) {
