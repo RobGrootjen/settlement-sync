@@ -83,12 +83,15 @@ class Db {
     }
   }
 
-  reconcile(asOf: string, rematchAll: boolean) {
+  reconcile(asOf: string, rematchAll: boolean, datasetId?: string) {
+    // Mirrors runReconciliation's dataset scoping.
+    const inScope = <T extends { dataset_id: string | null }>(rows: T[]) =>
+      datasetId ? rows.filter((r) => r.dataset_id === datasetId) : rows;
     const plan = planReconciliation({
-      transactions: this.transactions,
-      settlements: this.settlements,
+      transactions: inScope(this.transactions),
+      settlements: inScope(this.settlements),
       feeRules: CONTRACT_FEE_RULES,
-      existingDiscrepancies: this.discrepancies,
+      existingDiscrepancies: inScope(this.discrepancies),
       now: new Date(asOf),
       rematchAll,
     });
@@ -135,7 +138,7 @@ class Db {
   loadDemo() {
     this.clearDataset(DEMO_DATASET_ID);
     this.ingest(DEMO_DATASET_ID);
-    return this.reconcile(DEMO_AS_OF, true);
+    return this.reconcile(DEMO_AS_OF, true, DEMO_DATASET_ID);
   }
 
   private label(id: string): string {
