@@ -226,6 +226,7 @@ function Console() {
 
         <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Discrepancies</h2>
+          <div className="sr-only" />
           <div className="mt-3 space-y-2">
             {(findings.data ?? []).map((d) => (
               <div key={d.id} className="rounded-md border border-border p-3">
