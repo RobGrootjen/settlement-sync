@@ -8,11 +8,12 @@ data out — no database, no network, no clock. Everything else is a thin edge t
 
 - `*.server.ts` — persistence and queries (Supabase/PostgreSQL).
 - `api.functions.ts` — TanStack server functions; each handler is a one-line delegation.
-- `routes/api/public/ingest.ts` — raw HTTP entry point for machine callers.
+- `routes/api/public/*` — four HTTP entry points for machine callers: `POST ingest`, and read-only
+  `GET report`, `GET discrepancies`, `GET trace`.
 - `scripts/reconcile-cli.ts` — command-line entry point.
 - `routes/index.tsx` — presentation only; it never re-derives an outcome.
 
-The same core therefore serves the UI, the HTTP endpoint and the CLI identically, and the business
+The same core therefore serves the UI, the HTTP endpoints and the CLI identically, and the business
 rules are unit-testable without a database.
 
 ## End-to-end data flow
