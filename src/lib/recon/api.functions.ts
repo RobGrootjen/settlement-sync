@@ -94,6 +94,11 @@ export const loadDemoData = createServerFn({ method: "POST" }).handler(async () 
         : await ingestSettlementFile({ ...file, datasetId: DEMO_DATASET_ID }),
     );
   }
-  const summary = await runReconciliation({ rematchAll: true, asOf: DEMO_AS_OF });
+  // Scoped to the demo dataset so the load can never touch user-uploaded rows.
+  const summary = await runReconciliation({
+    rematchAll: true,
+    asOf: DEMO_AS_OF,
+    datasetId: DEMO_DATASET_ID,
+  });
   return { cleared, expected: demoExpectations(), runs, summary };
 });

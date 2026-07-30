@@ -83,12 +83,15 @@ class Db {
     }
   }
 
-  reconcile(asOf: string, rematchAll: boolean) {
+  reconcile(asOf: string, rematchAll: boolean, datasetId?: string) {
+    // Mirrors runReconciliation's dataset scoping.
+    const inScope = <T extends { dataset_id: string | null }>(rows: T[]) =>
+      datasetId ? rows.filter((r) => r.dataset_id === datasetId) : rows;
     const plan = planReconciliation({
-      transactions: this.transactions,
-      settlements: this.settlements,
+      transactions: inScope(this.transactions),
+      settlements: inScope(this.settlements),
       feeRules: CONTRACT_FEE_RULES,
-      existingDiscrepancies: this.discrepancies,
+      existingDiscrepancies: inScope(this.discrepancies),
       now: new Date(asOf),
       rematchAll,
     });
@@ -135,7 +138,7 @@ class Db {
   loadDemo() {
     this.clearDataset(DEMO_DATASET_ID);
     this.ingest(DEMO_DATASET_ID);
-    return this.reconcile(DEMO_AS_OF, true);
+    return this.reconcile(DEMO_AS_OF, true, DEMO_DATASET_ID);
   }
 
   private label(id: string): string {
@@ -288,5 +291,60 @@ describe("deterministic demo load", () => {
     expect(db.settlements.find((s) => s.id === "user-s1")).toBeDefined();
     expect(db.events.some((e) => e.fingerprint === "USER_EVENT")).toBe(true);
     expect(db.discrepancies.some((d) => d.dataset_id === null)).toBe(true);
+  });
+
+  it("demo reconciliation is dataset-scoped: user rows are never matched or restatused", () => {
+    const db = new Db();
+    db.loadDemo();
+
+    // A user-uploaded pair that WOULD match each other under a global pass.
+    const userTxn: Row<TxnCandidate> = {
+      id: "user-t9",
+      dataset_id: null,
+      transaction_id: "USR-9001",
+      merchant_reference: "USR-REF-9001",
+      processor: "NUSAPAY",
+      payment_method: "credit_card",
+      status: "CAPTURED",
+      currency: "IDR",
+      captured_amount_minor: 987_653,
+      capture_date: "2026-07-10T09:00:00Z",
+      expected_settlement_date: "2026-07-13T09:00:00Z",
+      reconciliation_status: "PENDING",
+    };
+    const userSettlement: Row<SettlementForPlan> = {
+      id: "user-s9",
+      dataset_id: null,
+      processor: "NUSAPAY",
+      batch_id: "USR-BATCH",
+      processor_transaction_id: "USR-9001",
+      merchant_reference: "USR-REF-9001",
+      currency: "IDR",
+      gross_amount_minor: 987_653,
+      fee_amount_minor: 19_753,
+      net_amount_minor: 967_900,
+      settlement_date: "2026-07-13T09:00:00Z",
+      source_filename: "nusapay-settlements.csv",
+      raw_payload: {},
+      matched_transaction_id: null,
+      match_method: null,
+      match_confidence: null,
+    };
+    db.transactions.push(userTxn);
+    db.settlements.push(userSettlement);
+    const demoDiscrepancies = db.discrepancies.length;
+
+    db.loadDemo();
+
+    // Untouched by the demo pass.
+    expect(db.settlements.find((s) => s.id === "user-s9")!.matched_transaction_id).toBeNull();
+    expect(db.transactions.find((t) => t.id === "user-t9")!.reconciliation_status).toBe("PENDING");
+    expect(db.discrepancies.filter((d) => d.dataset_id === null)).toHaveLength(0);
+    expect(db.discrepancies).toHaveLength(demoDiscrepancies);
+    expect(db.events.filter((e) => e.dataset_id === null)).toHaveLength(0);
+
+    // A regular (global) run still reconciles them.
+    db.reconcile("2026-07-30T23:00:00.000Z", false);
+    expect(db.settlements.find((s) => s.id === "user-s9")!.matched_transaction_id).toBe("user-t9");
   });
 });

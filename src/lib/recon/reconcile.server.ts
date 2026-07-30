@@ -16,12 +16,19 @@ export type { ReconciliationSummary } from "./plan";
  * Re-running with unchanged data performs no writes and emits no events.
  */
 export async function runReconciliation(
-  options: { rematchAll?: boolean; asOf?: string } = {},
+  options: { rematchAll?: boolean; asOf?: string; datasetId?: string | null } = {},
 ): Promise<ReconciliationSummary> {
   // asOf lets the deterministic demo reconcile against a fixed clock so its
   // results never drift with the calendar. Normal runs use wall-clock now.
   const now = options.asOf ? new Date(options.asOf) : new Date();
   if (Number.isNaN(now.getTime())) throw new Error(`invalid asOf "${options.asOf}"`);
+
+  // datasetId scopes the pass to one dataset (the demo load), so demo
+  // reconciliation can never match, restatus or create findings for
+  // user-uploaded rows. Regular runs pass nothing and stay global.
+  const scope = options.datasetId ?? null;
+  const scoped = <T>(query: T): T =>
+    scope ? ((query as { eq: (c: string, v: string) => T }).eq("dataset_id", scope) as T) : query;
 
   const [
     { data: txnData, error: txnError },
@@ -29,23 +36,23 @@ export async function runReconciliation(
     { data: ruleData },
     { data: discrepancyData, error: discrepancyError },
   ] = await Promise.all([
-    supabaseAdmin
+    scoped(supabaseAdmin
       .from("transactions")
       .select(
         "id,transaction_id,merchant_reference,processor,payment_method,status,currency,captured_amount_minor,capture_date,expected_settlement_date,reconciliation_status,dataset_id",
-      ),
-    supabaseAdmin
+      )),
+    scoped(supabaseAdmin
       .from("settlement_records")
       .select(
         "id,processor,batch_id,processor_transaction_id,merchant_reference,currency,gross_amount_minor,fee_amount_minor,net_amount_minor,settlement_date,source_filename,matched_transaction_id,match_method,match_confidence,dataset_id",
       )
-      .order("settlement_date", { ascending: true }),
+      .order("settlement_date", { ascending: true })),
     supabaseAdmin.from("processor_fee_rules").select("*"),
-    supabaseAdmin
+    scoped(supabaseAdmin
       .from("discrepancies")
       .select(
         "id,fingerprint,discrepancy_type,severity,currency,expected_amount_minor,actual_amount_minor,variance_amount_minor,reason,resolution_status",
-      ),
+      )),
   ]);
 
   if (txnError) throw new Error(txnError.message);
