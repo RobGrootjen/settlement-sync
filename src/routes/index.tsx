@@ -225,8 +225,158 @@ function Console() {
         </section>
 
         <section className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold">Transaction investigation</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Trace one transaction end to end: original capture, matched settlement, discrepancies and audit events.
+            Search by transaction ID (or merchant reference).
+          </p>
+          <form
+            className="mt-3 flex flex-wrap gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (traceQuery.trim()) trace.mutate(traceQuery.trim());
+            }}
+          >
+            <input
+              value={traceQuery}
+              onChange={(e) => setTraceQuery(e.target.value)}
+              placeholder="Transaction ID or merchant reference"
+              aria-label="Transaction ID or merchant reference"
+              className="h-9 min-w-[280px] flex-1 rounded-md border border-input bg-background px-3 font-mono text-sm"
+            />
+            <button
+              type="submit"
+              disabled={trace.isPending || !traceQuery.trim()}
+              className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            >
+              Search
+            </button>
+          </form>
+
+          {trace.isError && (
+            <p className="mt-3 text-sm text-destructive">{(trace.error as Error).message}</p>
+          )}
+
+          {trace.data && !trace.data.found && (
+            <p className="mt-4 text-sm text-muted-foreground">{trace.data.explanation[0]}</p>
+          )}
+
+          {trace.data?.found && trace.data.transaction && (
+            <div className="mt-4 space-y-4" data-testid="trace-result">
+              <div className="rounded-md border border-border p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Transaction</h3>
+                <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+                  <Field label="Transaction ID" value={trace.data.transaction.transaction_id} mono />
+                  <Field label="Merchant reference" value={trace.data.transaction.merchant_reference ?? "—"} mono />
+                  <Field label="Processor" value={trace.data.transaction.processor} />
+                  <Field label="Payment method" value={trace.data.transaction.payment_method} />
+                  <Field label="Capture status" value={trace.data.transaction.status} />
+                  <Field label="Reconciliation status" value={trace.data.transaction.reconciliation_status} />
+                  <Field
+                    label="Captured amount"
+                    value={
+                      trace.data.transaction.captured_amount_minor === null
+                        ? "—"
+                        : formatMinor(
+                            Number(trace.data.transaction.captured_amount_minor),
+                            trace.data.transaction.currency,
+                          )
+                    }
+                    mono
+                  />
+                  <Field label="Capture date" value={trace.data.transaction.capture_date ?? "—"} mono />
+                  <Field
+                    label="Expected settlement date"
+                    value={trace.data.transaction.expected_settlement_date ?? "—"}
+                    mono
+                  />
+                </dl>
+              </div>
+
+              <div className="rounded-md border border-border p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Matched settlements
+                </h3>
+                {trace.data.settlements.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No settlement record is matched to this transaction.</p>
+                ) : (
+                  trace.data.settlements.map((s) => (
+                    <dl key={s.id} className="mt-2 grid gap-x-6 gap-y-1 border-t border-border pt-2 text-sm sm:grid-cols-2">
+                      <Field label="Processor txn ID" value={s.processor_transaction_id ?? "—"} mono />
+                      <Field label="Batch" value={s.batch_id ?? "—"} mono />
+                      <Field label="Gross" value={formatMinor(Number(s.gross_amount_minor), s.currency)} mono />
+                      <Field label="Fee" value={formatMinor(Number(s.fee_amount_minor), s.currency)} mono />
+                      <Field label="Net" value={formatMinor(Number(s.net_amount_minor), s.currency)} mono />
+                      <Field label="Settlement date" value={s.settlement_date} mono />
+                      <Field
+                        label="Match method"
+                        value={s.match_method ? (MATCH_METHOD_LABEL[s.match_method] ?? s.match_method) : "—"}
+                      />
+                      <Field
+                        label="Confidence"
+                        value={s.match_confidence === null ? "—" : Number(s.match_confidence).toFixed(2)}
+                        mono
+                      />
+                      <Field label="Source file" value={s.source_filename ?? "—"} mono />
+                    </dl>
+                  ))
+                )}
+              </div>
+
+              <div className="rounded-md border border-border p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {trace.data.explanation.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-md border border-border p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Related discrepancies
+                </h3>
+                {trace.data.discrepancies.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">None recorded.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {trace.data.discrepancies.map((d) => (
+                      <li key={d.id} className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
+                          {d.discrepancy_type}
+                        </span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_STYLE[d.severity] ?? ""}`}>
+                          {d.severity}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{d.resolution_status}</span>
+                        <span className="text-muted-foreground">{d.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-md border border-border p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Event history</h3>
+                {trace.data.events.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No reconciliation events recorded yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1 font-mono text-xs text-muted-foreground">
+                    {trace.data.events.map((e) => (
+                      <li key={e.id}>
+                        {new Date(e.created_at).toISOString()} · {e.event_type}
+                        {e.match_method ? ` · ${e.match_method}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Discrepancies</h2>
-          <div className="sr-only" />
           <div className="mt-3 space-y-2">
             {(findings.data ?? []).map((d) => (
               <div key={d.id} className="rounded-md border border-border p-3">
@@ -273,6 +423,15 @@ function Console() {
         </section>
       </div>
     </main>
+  );
+}
+
+function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className={mono ? "font-mono text-xs" : "text-sm"}>{value}</dd>
+    </div>
   );
 }
 
