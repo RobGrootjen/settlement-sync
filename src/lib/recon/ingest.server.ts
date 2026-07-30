@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getAdapter } from "./processors";
+import { splitCsvLine, nonEmptyLines } from "./processors/adapter";
 import { expectedSettlementDate } from "./dates";
 import { parseMinor } from "./money";
 import type { RowError } from "./types";
@@ -91,11 +92,19 @@ export async function ingestTransactions(input: {
 }): Promise<IngestSummary> {
   const errors: RowError[] = [];
   let rows: TransactionInput[] = [];
-  try {
-    const parsed = JSON.parse(input.content);
-    rows = Array.isArray(parsed) ? parsed : (parsed.transactions ?? []);
-  } catch (e) {
-    errors.push({ row: 0, reason: `invalid JSON: ${(e as Error).message}` });
+  if (looksLikeCsv(input.content)) {
+    try {
+      rows = parseCapturesCsv(input.content);
+    } catch (e) {
+      errors.push({ row: 0, reason: `invalid CSV: ${(e as Error).message}` });
+    }
+  } else {
+    try {
+      const parsed = JSON.parse(input.content);
+      rows = Array.isArray(parsed) ? parsed : (parsed.transactions ?? []);
+    } catch (e) {
+      errors.push({ row: 0, reason: `invalid JSON: ${(e as Error).message}` });
+    }
   }
 
   const accepted: Record<string, unknown>[] = [];
@@ -158,4 +167,40 @@ export async function ingestTransactions(input: {
     rejectedCount: errors.length,
     errors,
   };
+}
+/** Captures arrive as JSON in API calls and as CSV in the sample dataset. */
+export function looksLikeCsv(content: string): boolean {
+  const first = content.trimStart()[0];
+  return first !== "{" && first !== "[";
+}
+
+/**
+ * CSV capture parser. Header-driven so column order does not matter.
+ * Required: transaction_id, processor, payment_method, status, currency.
+ */
+export function parseCapturesCsv(content: string): TransactionInput[] {
+  const lines = nonEmptyLines(content);
+  if (lines.length === 0) return [];
+  const header = splitCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const required = ["transaction_id", "processor", "payment_method", "status", "currency"];
+  const missing = required.filter((r) => !header.includes(r));
+  if (missing.length) throw new Error(`missing header column(s): ${missing.join(", ")}`);
+
+  return lines.slice(1).map((line) => {
+    const cells = splitCsvLine(line);
+    const get = (name: string) => {
+      const i = header.indexOf(name);
+      return i === -1 ? "" : (cells[i] ?? "");
+    };
+    return {
+      transaction_id: get("transaction_id"),
+      merchant_reference: get("merchant_reference") || null,
+      processor: get("processor"),
+      payment_method: get("payment_method"),
+      status: get("status"),
+      currency: get("currency"),
+      captured_amount_minor: get("captured_amount_minor") === "" ? null : get("captured_amount_minor"),
+      capture_date: get("capture_date") || null,
+    } satisfies TransactionInput;
+  });
 }
