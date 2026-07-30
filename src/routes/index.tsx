@@ -52,8 +52,23 @@ function Console() {
   const [content, setContent] = useState("");
   const [log, setLog] = useState<string>("");
 
+  const emptyFilters = {
+    type: "",
+    processor: "",
+    currency: "",
+    severity: "",
+    status: "",
+    dateFrom: "",
+    dateTo: "",
+  };
+  const [filters, setFilters] = useState(emptyFilters);
+  const activeFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ""));
+
   const report = useQuery({ queryKey: ["report"], queryFn: () => getReport() });
-  const findings = useQuery({ queryKey: ["discrepancies"], queryFn: () => getDiscrepancies({ data: {} }) });
+  const findings = useQuery({
+    queryKey: ["discrepancies", activeFilters],
+    queryFn: () => getDiscrepancies({ data: activeFilters }),
+  });
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => getIngestionRuns() });
 
   const refreshAll = () => {
