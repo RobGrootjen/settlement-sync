@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getAdapter } from "./processors";
+import { looksLikeCsv, parseCapturesCsv, type TransactionInput } from "./captures";
 import { expectedSettlementDate } from "./dates";
 import { parseMinor } from "./money";
 import type { RowError } from "./types";
@@ -70,17 +71,6 @@ export async function ingestSettlementFile(input: {
   };
 }
 
-interface TransactionInput {
-  transaction_id: string;
-  merchant_reference?: string | null;
-  processor: string;
-  payment_method: string;
-  status: string;
-  currency: string;
-  captured_amount_minor: string | number | null;
-  capture_date?: string | null;
-}
-
 /**
  * Ingest capture-side transactions (JSON array). expected_settlement_date is
  * derived from capture_date + the payment-method settlement window when absent.
@@ -91,11 +81,19 @@ export async function ingestTransactions(input: {
 }): Promise<IngestSummary> {
   const errors: RowError[] = [];
   let rows: TransactionInput[] = [];
-  try {
-    const parsed = JSON.parse(input.content);
-    rows = Array.isArray(parsed) ? parsed : (parsed.transactions ?? []);
-  } catch (e) {
-    errors.push({ row: 0, reason: `invalid JSON: ${(e as Error).message}` });
+  if (looksLikeCsv(input.content)) {
+    try {
+      rows = parseCapturesCsv(input.content);
+    } catch (e) {
+      errors.push({ row: 0, reason: `invalid CSV: ${(e as Error).message}` });
+    }
+  } else {
+    try {
+      const parsed = JSON.parse(input.content);
+      rows = Array.isArray(parsed) ? parsed : (parsed.transactions ?? []);
+    } catch (e) {
+      errors.push({ row: 0, reason: `invalid JSON: ${(e as Error).message}` });
+    }
   }
 
   const accepted: Record<string, unknown>[] = [];

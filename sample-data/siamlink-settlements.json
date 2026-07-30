@@ -1,0 +1,184 @@
+{
+  "batch": {
+    "id": "DMO-SI-BATCH-20260715",
+    "settled_at": "2026-07-15"
+  },
+  "items": [
+    {
+      "reference": "DMO-SI-0002",
+      "order_id": "DMO-MC-0002",
+      "currency": "THB",
+      "amount": "655.82",
+      "fee": "21.04",
+      "settled_at": "2026-07-15"
+    },
+    {
+      "reference": "DMO-SI-0005",
+      "order_id": "DMO-MC-0005",
+      "currency": "THB",
+      "amount": "978.46",
+      "fee": "18.81",
+      "settled_at": "2026-07-27"
+    },
+    {
+      "reference": "DMO-SI-0008",
+      "order_id": "DMO-MC-0008",
+      "currency": "THB",
+      "amount": "4454.94",
+      "fee": "82.19",
+      "settled_at": "2026-07-11"
+    },
+    {
+      "reference": "DMO-SI-0011",
+      "order_id": "DMO-MC-0011",
+      "currency": "THB",
+      "amount": "223.02",
+      "fee": "9.13",
+      "settled_at": "2026-07-24"
+    },
+    {
+      "reference": "DMO-SI-0014",
+      "order_id": "DMO-MC-0014",
+      "currency": "THB",
+      "amount": "3080.30",
+      "fee": "37.72",
+      "settled_at": "2026-07-09"
+    },
+    {
+      "reference": "DMO-SI-0017",
+      "order_id": "DMO-MC-0017",
+      "currency": "THB",
+      "amount": "2344.26",
+      "fee": "44.20",
+      "settled_at": "2026-07-08"
+    },
+    {
+      "reference": "DMO-SI-0020",
+      "order_id": "DMO-MC-0020",
+      "currency": "THB",
+      "amount": "2174.97",
+      "fee": "62.81",
+      "settled_at": "2026-07-14"
+    },
+    {
+      "reference": "DMO-SI-0023",
+      "order_id": "DMO-MC-0023",
+      "currency": "THB",
+      "amount": "1665.60",
+      "fee": "24.99",
+      "settled_at": "2026-07-08"
+    },
+    {
+      "reference": "DMO-SI-0026",
+      "order_id": "DMO-MC-0026",
+      "currency": "THB",
+      "amount": "4580.85",
+      "fee": "84.46",
+      "settled_at": "2026-07-06"
+    },
+    {
+      "reference": "DMO-SI-0029",
+      "order_id": "DMO-MC-0029",
+      "currency": "THB",
+      "amount": "919.67",
+      "fee": "28.29",
+      "settled_at": "2026-07-22"
+    },
+    {
+      "reference": "DMO-SI-0032",
+      "order_id": "DMO-MC-0032",
+      "currency": "THB",
+      "amount": "1961.48",
+      "fee": "27.65",
+      "settled_at": "2026-07-10"
+    },
+    {
+      "reference": "DMO-SI-0035",
+      "order_id": "DMO-MC-0035",
+      "currency": "THB",
+      "amount": "3986.29",
+      "fee": "73.75",
+      "settled_at": "2026-07-17"
+    },
+    {
+      "reference": "DMO-SI-0038",
+      "order_id": "DMO-MC-0038",
+      "currency": "THB",
+      "amount": "2575.37",
+      "fee": "73.82",
+      "settled_at": "2026-07-07"
+    },
+    {
+      "reference": "DMO-SI-0041",
+      "order_id": "DMO-MC-0041",
+      "currency": "THB",
+      "amount": "4450.29",
+      "fee": "50.05",
+      "settled_at": "2026-07-28"
+    },
+    {
+      "reference": "DMO-SI-0044",
+      "order_id": "DMO-MC-0044",
+      "currency": "THB",
+      "amount": "4653.04",
+      "fee": "85.75",
+      "settled_at": "2026-07-04"
+    },
+    {
+      "reference": "DMO-SI-0047",
+      "order_id": "DMO-MC-0047",
+      "currency": "THB",
+      "amount": "916.85",
+      "fee": "28.21",
+      "settled_at": "2026-07-22"
+    },
+    {
+      "reference": "DMO-SI-0050",
+      "order_id": "DMO-MC-0050",
+      "currency": "THB",
+      "amount": "2636.08",
+      "fee": "33.72",
+      "settled_at": "2026-07-25"
+    },
+    {
+      "reference": "DMO-SI-0053",
+      "order_id": "DMO-MC-0053",
+      "currency": "THB",
+      "amount": "3983.45",
+      "fee": "73.70",
+      "settled_at": "2026-07-22"
+    },
+    {
+      "reference": "DMO-SI-0056",
+      "order_id": "DMO-MC-0056",
+      "currency": "THB",
+      "amount": "4626.68",
+      "fee": "130.23",
+      "settled_at": "2026-07-04"
+    },
+    {
+      "reference": "DMO-SI-0059",
+      "order_id": "DMO-MC-0059",
+      "currency": "THB",
+      "amount": "2896.19",
+      "fee": "38.24",
+      "settled_at": "2026-07-15"
+    },
+    {
+      "reference": null,
+      "order_id": null,
+      "currency": "THB",
+      "amount": "3950.77",
+      "fee": "45.56",
+      "settled_at": "2026-07-23"
+    },
+    {
+      "reference": "DMO-ORPH-SI-2",
+      "order_id": "DMO-ORPH-REF-2",
+      "currency": "THB",
+      "amount": "3498.02",
+      "fee": "64.96",
+      "settled_at": "2026-07-27"
+    }
+  ]
+}

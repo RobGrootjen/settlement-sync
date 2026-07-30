@@ -66,14 +66,22 @@ export const resolveFinding = createServerFn({ method: "POST" })
     return resolveDiscrepancy(data);
   });
 
-/** Loads the bundled demo fixtures and runs a full reconciliation pass. */
+/**
+ * Loads the deterministic challenge dataset: clears previous demo rows, then
+ * ingests the exact generated files through the normal adapters/ingestion path
+ * before running a full reconciliation. Safe to re-run.
+ */
 export const loadDemoData = createServerFn({ method: "POST" }).handler(async () => {
-  const { DEMO_FILES } = await import("./demo-data");
+  const { demoDataset } = await import("./demo-data");
+  const { clearDemoData } = await import("./demo.server");
   const { ingestSettlementFile, ingestTransactions } = await import("./ingest.server");
   const { runReconciliation } = await import("./reconcile.server");
 
+  const cleared = await clearDemoData();
+  const dataset = demoDataset();
+
   const runs = [];
-  for (const file of DEMO_FILES) {
+  for (const file of dataset.files) {
     runs.push(
       file.processor === "CAPTURES"
         ? await ingestTransactions({ filename: file.filename, content: file.content })
@@ -81,5 +89,5 @@ export const loadDemoData = createServerFn({ method: "POST" }).handler(async () 
     );
   }
   const summary = await runReconciliation({ rematchAll: true });
-  return { runs, summary };
+  return { cleared, expected: dataset.expected, runs, summary };
 });
