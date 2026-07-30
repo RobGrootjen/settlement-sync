@@ -138,6 +138,18 @@ class Db {
     return this.reconcile(DEMO_AS_OF, true);
   }
 
+  private label(id: string): string {
+    const t = this.transactions.find((x) => x.id === id);
+    if (t) return t.transaction_id;
+    const st = this.settlements.find((x) => x.id === id);
+    if (st) return [st.processor, st.processor_transaction_id, st.merchant_reference, st.settlement_date, st.gross_amount_minor].join("~");
+    return id;
+  }
+
+  stableFingerprint(fingerprint: string | null): string {
+    return (fingerprint ?? "").split(":").map((part) => (part === "-" ? part : this.label(part))).join(":");
+  }
+
   snapshot() {
     return JSON.stringify({
       transactions: this.transactions
@@ -146,7 +158,11 @@ class Db {
       settlements: this.settlements
         .map((s) => [s.processor, s.processor_transaction_id, s.merchant_reference, s.settlement_date, s.gross_amount_minor, s.fee_amount_minor, s.match_method, s.dataset_id])
         .sort(),
-      discrepancies: this.discrepancies.map((d) => [d.fingerprint, d.resolution_status, d.variance_amount_minor]).sort(),
+      // Surrogate row ids are re-issued on every load (as in Postgres), so
+      // fingerprints are compared through stable business keys.
+      discrepancies: this.discrepancies
+        .map((d) => [this.stableFingerprint(d.fingerprint), d.resolution_status, d.variance_amount_minor])
+        .sort(),
     });
   }
 }
